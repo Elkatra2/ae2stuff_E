@@ -17,13 +17,14 @@ import appeng.util.Platform
 import cpw.mods.fml.relauncher.{Side, SideOnly}
 import net.bdew.ae2stuff.misc.{BlockWrenchable, MachineMaterial}
 import net.bdew.lib.Misc
-import net.bdew.lib.block.{HasTE, SimpleBlock}
+import net.bdew.lib.block.{BlockRef, HasTE, SimpleBlock}
+import net.bdew.lib.helpers.ChatHelper.{Color, L, pimpIChatComponent}
 import net.minecraft.block.Block
 import net.minecraft.client.renderer.texture.IIconRegister
 import net.minecraft.entity.EntityLivingBase
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.ItemStack
-import net.minecraft.util.IIcon
+import net.minecraft.util.{ChatComponentText, IIcon}
 import net.minecraft.world.{IBlockAccess, World}
 import net.minecraftforge.common.util.ForgeDirection
 
@@ -44,6 +45,12 @@ object BlockWireless
       meta: Int
   ): Unit = {
     getTE(world, x, y, z).doUnlink()
+    if (
+      WirelessOverlayRender.oTileRef.isDefined && WirelessOverlayRender.oTileRef.get == (x, y, z)
+    ) {
+      WirelessOverlayRender.oTileRef = None
+      WirelessOverlayRender.oLinkRef = None
+    }
     super.breakBlock(world, x, y, z, block, meta)
   }
 
@@ -88,6 +95,32 @@ object BlockWireless
           te.zCoord
         )
         return true
+      }
+    } else {
+      val tile = getTE(world, new BlockRef(x, y, z))
+      if (WirelessOverlayRender.isRender) {
+        if (tile.myPos != WirelessOverlayRender.oTileRef.get) {
+          WirelessOverlayRender.oTileRef = Some(tile.myPos)
+          WirelessOverlayRender.oLinkRef = tile.link.value
+          player.addChatMessage(
+            L("ae2stuff.visualiser.mode.changed").setColor(Color.BLUE)
+          )
+          return false
+        }
+      }
+
+      WirelessOverlayRender.oTileRef = Some(tile.myPos)
+      WirelessOverlayRender.oLinkRef = tile.link.value
+      WirelessOverlayRender.isRender = !WirelessOverlayRender.isRender
+
+      if (WirelessOverlayRender.isRender) {
+        player.addChatMessage(
+          L("ae2stuff.visualiser.mode.shown").setColor(Color.BLUE)
+        )
+      } else {
+        player.addChatMessage(
+          L("ae2stuff.visualiser.mode.hidden").setColor(Color.BLUE)
+        )
       }
     }
     false
